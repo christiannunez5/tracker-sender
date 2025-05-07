@@ -5,6 +5,10 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.telephony.SmsManager;
+import android.view.View;
+import android.widget.Button;
+
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -28,41 +32,47 @@ public class MainActivity extends AppCompatActivity {
     private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1;
     private MapView map = null;
 
+    private Button sendMessageBtn;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-
-        // Important! This line needs to be called before setContentView
         Context ctx = getApplicationContext();
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
-
-        // Set the layout only ONCE
         setContentView(R.layout.activity_main);
 
-        // Initialize map AFTER setContentView
-        map = findViewById(R.id.map);
-
-        // Request permissions
         requestPermissionsIfNecessary(new String[]{
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
+                android.Manifest.permission.SEND_SMS,
+                android.Manifest.permission.RECEIVE_MMS,
+                android.Manifest.permission.READ_SMS,
+                android.Manifest.permission.ACCESS_FINE_LOCATION,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
         });
 
-        // Configure the map
+        map = findViewById(R.id.map);
+        sendMessageBtn = findViewById(R.id.sendMessageBtn);
+
+        sendMessageBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                String myPhoneNumber = "09458047704";
+                String adolfPhoneNumber = "09686126524";
+                String message = "asa naka?";
+                SmsManager smsManager = SmsManager.getDefault();
+                smsManager.sendTextMessage(myPhoneNumber, null, message, null, null);
+            }
+        });
+
         map.setTileSource(TileSourceFactory.MAPNIK);
         map.setMultiTouchControls(true);
 
-        // Add compass
-        CompassOverlay compassOverlay = new CompassOverlay(this, new InternalCompassOrientationProvider(this), map);
-        compassOverlay.enableCompass();
-        map.getOverlays().add(compassOverlay);
-        // Set location and zoom
-        GeoPoint startPoint = new GeoPoint(10.297237698496014, 123.89667472332933); // Replace with your coordinates
+        // set the defaukt location
+        GeoPoint startPoint = new GeoPoint(35.3606, 138.7274); // Replace with your coordinates
         map.getController().setZoom(20.0); // Adjust zoom level as needed
         map.getController().setCenter(startPoint);
-
-        // Add marker
         Marker marker = new Marker(map);
         marker.setPosition(startPoint);
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
