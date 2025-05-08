@@ -1,17 +1,16 @@
 package com.example.trackerappv2;
 
-import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.telephony.SmsMessage;
 import android.util.Log;
-import android.widget.Toast;
+
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class SmsReceiver extends BroadcastReceiver {
 
-    @SuppressLint("UnsafeProtectedBroadcastReceiver")
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.d("SMS_RECEIVER", "onReceive called");
@@ -26,15 +25,18 @@ public class SmsReceiver extends BroadcastReceiver {
                     String message = sms.getMessageBody();
 
                     if (message.startsWith("Lat")) {
-
+                        Log.d("SMS_RECEIVER", "Message: " + message);
                         String[] parts = message.split(",");
                         double lat = Double.parseDouble(parts[0].split(":")[1]);
+                        Log.d("SMS_RECEIVER", "Latitude: " + lat);
                         double lon = Double.parseDouble(parts[1].split(":")[1]);
+                        Log.d("SMS_RECEIVER", "Longitude: " + lon);
 
-                        Intent mapIntent = new Intent("com.example.trackerappreceiver.UPDATE_MAP");
-                        mapIntent.putExtra("latitude", lat);
-                        mapIntent.putExtra("longitude", lon);
-                        context.sendBroadcast(mapIntent);
+                        Intent broadcastIntent = new Intent("SMS_LOCATION_RECEIVED");
+                        broadcastIntent.putExtra("latitude", lat);
+                        broadcastIntent.putExtra("longitude", lon);
+
+                        LocalBroadcastManager.getInstance(context).sendBroadcast(broadcastIntent);
                     }
 
                 }

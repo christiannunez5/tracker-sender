@@ -1,11 +1,15 @@
 package com.example.trackerappv2;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.telephony.SmsManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
@@ -16,6 +20,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
@@ -34,44 +39,71 @@ public class MainActivity extends AppCompatActivity {
 
     private Button sendMessageBtn;
 
+    private double longitude;
+    private double latitude;
+    private Marker smsLocationMarker;
+
+    private final BroadcastReceiver locationReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            double lat = intent.getDoubleExtra("latitude", 0.0);
+            double lon = intent.getDoubleExtra("longitude", 0.0);
+
+            longitude = lon;
+            latitude = lat;
+
+            if (lat != 0.0 && lon != 0.0) {
+                latitude = lat;
+                longitude = lon;
+
+                Log.d("SMS_RECEIVER", "Latitude: " + lat + ", Longitude: " + lon);
+
+                GeoPoint point = new GeoPoint(lat, lon);
+                smsLocationMarker.setPosition(point);
+                map.getController().animateTo(point);
+                map.invalidate(); // Redraw the map
+            }
+
+            Log.d("SMS_RECEIVER", "Latitude: " + lat + ", Longitude: " + lon);
+        }
+    };
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         Context ctx = getApplicationContext();
+        Configuration.getInstance().setUserAgentValue(getPackageName());
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
-        setContentView(R.layout.activity_main);
 
-        requestPermissionsIfNecessary(new String[]{
-                android.Manifest.permission.SEND_SMS,
-                android.Manifest.permission.RECEIVE_MMS,
-                android.Manifest.permission.READ_SMS,
-                android.Manifest.permission.ACCESS_FINE_LOCATION,
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-        });
+        setContentView(R.layout.activity_main);
 
         map = findViewById(R.id.map);
         sendMessageBtn = findViewById(R.id.sendMessageBtn);
 
+        smsLocationMarker = new Marker(map);
+        smsLocationMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+        smsLocationMarker.setTitle("SMS Location");
+        map.getOverlays().add(smsLocationMarker);
+
         sendMessageBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                String testPhoneNumber = "09277377841";
                 String myPhoneNumber = "09458047704";
                 String adolfPhoneNumber = "09686126524";
                 String message = "asa naka?";
                 SmsManager smsManager = SmsManager.getDefault();
-                smsManager.sendTextMessage(myPhoneNumber, null, message, null, null);
+                smsManager.sendTextMessage(testPhoneNumber, null, message, null, null);
             }
         });
 
         map.setTileSource(TileSourceFactory.MAPNIK);
         map.setMultiTouchControls(true);
 
-        // set the defaukt location
-        GeoPoint startPoint = new GeoPoint(35.3606, 138.7274); // Replace with your coordinates
-        map.getController().setZoom(20.0); // Adjust zoom level as needed
+        GeoPoint startPoint = new GeoPoint(	35.682839, 139.759455);
+        map.getController().setZoom(20.0);
         map.getController().setCenter(startPoint);
         Marker marker = new Marker(map);
         marker.setPosition(startPoint);
@@ -132,5 +164,18 @@ public class MainActivity extends AppCompatActivity {
                     permissionsToRequest.toArray(new String[0]),
                     REQUEST_PERMISSIONS_REQUEST_CODE);
         }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        LocalBroadcastManager.getInstance(this).registerReceiver(locationReceiver,
+                new IntentFilter("SMS_LOCATION_RECEIVED"));
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(locationReceiver);
     }
 }
